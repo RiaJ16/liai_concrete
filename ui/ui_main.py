@@ -70,17 +70,10 @@ class Ui_main(object):
         icon.addFile(u":/main/icons/graphic_mode.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.btn_grafico.setIcon(icon)
         self.btn_grafico.setIconSize(QSize(30, 30))
+        self.btn_grafico.setCheckable(True)
+        self.btn_grafico.setChecked(True)
 
         self.horizontalLayout.addWidget(self.btn_grafico)
-
-        self.btn_tabla = QToolButton(self.toolbar)
-        self.btn_tabla.setObjectName(u"btn_tabla")
-        icon1 = QIcon()
-        icon1.addFile(u":/main/icons/table_mode.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.btn_tabla.setIcon(icon1)
-        self.btn_tabla.setIconSize(QSize(30, 30))
-
-        self.horizontalLayout.addWidget(self.btn_tabla)
 
         self.le_filtrar = QLineEdit(self.toolbar)
         self.le_filtrar.setObjectName(u"le_filtrar")
@@ -143,7 +136,6 @@ class Ui_main(object):
     def retranslateUi(self, main):
         main.setWindowTitle(QCoreApplication.translate("main", u"LIAI Concreto", None))
         self.btn_grafico.setText(QCoreApplication.translate("main", u"1", None))
-        self.btn_tabla.setText(QCoreApplication.translate("main", u"2", None))
         self.label.setText("")
     # retranslateUi
 

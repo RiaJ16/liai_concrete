@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="board">
     <file>images/board.jpg</file>
+    <file>images/board_small.png</file>
     <file>images/board.png</file>
   </qresource>
   <qresource prefix="sensor">

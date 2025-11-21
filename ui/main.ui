@@ -70,22 +70,11 @@ QScrollArea{
              <height>30</height>
             </size>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QToolButton" name="btn_tabla">
-           <property name="text">
-            <string>2</string>
+           <property name="checkable">
+            <bool>true</bool>
            </property>
-           <property name="icon">
-            <iconset resource="resources.qrc">
-             <normaloff>:/main/icons/table_mode.png</normaloff>:/main/icons/table_mode.png</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>30</width>
-             <height>30</height>
-            </size>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
