@@ -57,6 +57,18 @@ QScrollArea{
          </property>
          <item>
           <widget class="QToolButton" name="btn_grafico">
+           <property name="styleSheet">
+            <string notr="true">QToolButton {
+    background-color: #1f2a36;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+QToolButton:hover {
+    background-color: #33475b;
+}
+</string>
+           </property>
            <property name="text">
             <string>1</string>
            </property>
