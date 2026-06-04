@@ -68,14 +68,14 @@ class Tarjeta(JsonMixin, MapperMixin):
     tarjeta_id: int = 0
     nombre: str = ''
     id_fisico: str = ''
-    grupo_id: int = None
+    nodo_id: int = None
     tags: list = None
 
-    def __init__(self, tarjeta_id=0, id_fisico='', nombre="", grupo_id=None, tags=None):
+    def __init__(self, tarjeta_id=0, id_fisico='', nombre="", nodo_id=None, tags=None):
         self.tarjeta_id = tarjeta_id
         self.id_fisico = id_fisico
         self.nombre = nombre
-        self.grupo_id = grupo_id
+        self.nodo_id = nodo_id
         self.tags = tags
 
     @staticmethod
@@ -84,7 +84,7 @@ class Tarjeta(JsonMixin, MapperMixin):
             'tarjeta_id': 'tarjeta_id',
             'id_fisico': 'id_fisico',
             'nombre': 'nombre',
-            'grupo_id': 'grupo_id',
+            'nodo_id': 'nodo_id',
             'tags': 'tags',
         }
 
@@ -148,18 +148,21 @@ class Registro(JsonMixin, MapperMixin):
         }
 
 @dataclass
-class Grupo(JsonMixin, MapperMixin):
+class Nodo(JsonMixin, MapperMixin):
 
-    grupo_id: int = 0
+    nodo_id: int = 0
     nombre: str = ''
+    id_fisico: str = ''
 
-    def __init__(self, grupo_id=0, nombre=''):
-        self.grupo_id = grupo_id
+    def __init__(self, nodo_id=0, nombre='', id_fisico=''):
+        self.nodo_id = nodo_id
         self.nombre = nombre
+        self.id_fisico = id_fisico
 
     @staticmethod
     def map_to_db_fields():
         return {
-            'grupo_id': 'grupo_id',
-            'grupo_nombre': 'nombre',
+            'nodo_id': 'nodo_id',
+            'nombre': 'nombre',
+            'id_fisico': 'id_fisico',
         }

@@ -5,6 +5,7 @@ from concrete import conector
 from concrete.board_widget import BoardMiniWidget
 from concrete.board_widget import BoardWidget
 from concrete.registro import Registro
+from concrete.registro_nodo import RegistroNodo
 from concrete.sensor_widget import SensorWidget
 from ui.ui_main import Ui_main
 
@@ -25,6 +26,7 @@ class MainWindow(QMainWindow, Ui_main):
     def __signals__(self):
         self.btn_grafico.toggled.connect(self.swap_layout)
         self.accion_dispositivo.triggered.connect(self.register_new)
+        self.accion_nodo.triggered.connect(self.register_nodo)
 
     def set_main_layout(self):
         layout = QVBoxLayout()
@@ -76,3 +78,7 @@ class MainWindow(QMainWindow, Ui_main):
         if registro.exec():
             self.populate_dashboard()
             self.populate_with_mini()
+
+    def register_nodo(self):
+        registro_nodo = RegistroNodo()
+        registro_nodo.exec()

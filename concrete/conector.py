@@ -2,7 +2,7 @@
 
 from mysql.connector import pooling
 
-from concrete.serializers import Tarjeta, Sensor, Registro, Grupo
+from concrete.serializers import Tarjeta, Sensor, Registro, Nodo
 from private import database
 
 _pool = pooling.MySQLConnectionPool(
@@ -72,24 +72,24 @@ def consultar_registros(sensor_id, fecha_inicial, fecha_final):
         registros.append(registro)
     return registros
 
-def consultar_grupos():
-    sql = "SELECT * FROM grupo "
+def consultar_nodos():
+    sql = "SELECT * FROM nodo "
     rows = consultar(sql)
-    grupos = []
+    nodos = []
     for row in rows:
-        grupo = Grupo()
-        grupo.update_from_dict(row)
-        grupos.append(grupo)
-    return grupos
+        nodo = Nodo()
+        nodo.update_from_dict(row)
+        nodos.append(nodo)
+    return nodos
 
 def agregar_tarjeta(tarjeta, tipo_sensores):
     sql = ("INSERT INTO tarjeta "
-           "(id_fisico, nombre, grupo_id, tags) "
-           "VALUES (%(id_fisico)s, %(nombre)s, %(grupo_id)s, %(tags)s)")
+           "(id_fisico, nombre, nodo_id, tags) "
+           "VALUES (%(id_fisico)s, %(nombre)s, %(nodo_id)s, %(tags)s)")
     args = {
         'id_fisico': tarjeta.id_fisico,
         'nombre': tarjeta.nombre,
-        'grupo_id': tarjeta.grupo_id,
+        'nodo_id': tarjeta.nodo_id,
         'tags': tarjeta.tags,
     }
     tarjeta_id = insertar(sql, args)
@@ -104,10 +104,19 @@ def agregar_tarjeta(tarjeta, tipo_sensores):
 def agregar_sensor(sensor):
     sql = ("INSERT INTO sensor "
            "(tarjeta_id, tipo) "
-           "VALUES (%(tarjeta_id)s, %(tipo)s)" )
+           "VALUES (%(tarjeta_id)s, %(tipo)s)")
     args = {
         'tarjeta_id': sensor.tarjeta_id,
         'tipo': sensor.tipo
     }
     return insertar(sql, args)
 
+def agregar_nodo(nodo):
+    sql = ("INSERT INTO nodo "
+           "(nombre, id_fisico) "
+           "VALUES (%(nombre)s, %(id_fisico)s)")
+    args = {
+        'nombre': nodo.nombre,
+        'id_fisico': nodo.id_fisico
+    }
+    return insertar(sql, args)

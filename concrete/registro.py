@@ -16,7 +16,7 @@ class Registro(QDialog, Ui_registro):
         super().__init__(parent)
         self.setupUi(self)
         self.init_gui()
-        self.success = self.cargar_grupos()
+        self.success = self.cargar_nodos()
         self.__signals()
 
     def init_gui(self):
@@ -24,7 +24,7 @@ class Registro(QDialog, Ui_registro):
         icons = {
             self.icon_nombre: 'fa5s.id-card',
             self.icon_id: 'fa5s.microchip',
-            self.icon_grupo: 'fa5s.users',
+            self.icon_nodo: 'fa5s.users',
             self.icon_tags: 'fa5s.tags',
             self.icon_sensores: 'fa5s.thermometer-half',
         }
@@ -39,8 +39,8 @@ class Registro(QDialog, Ui_registro):
         if not self.success:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
-            msg.setWindowTitle("No se encontraron grupos")
-            msg.setText("Crea al menos un grupo antes de continuar")
+            msg.setWindowTitle("No se encontraron nodos")
+            msg.setText("Crea al menos un nodo antes de continuar")
             msg.setStyleSheet("color: black")
             msg.exec()
             return QDialog.Rejected
@@ -50,9 +50,9 @@ class Registro(QDialog, Ui_registro):
         tarjeta = Tarjeta()
         tarjeta.id_fisico = self.le_id.text()
         tarjeta.nombre = self.le_nombre.text()
-        grupo = self.cb_grupo.currentData()
-        if grupo:
-            tarjeta.grupo_id = grupo.grupo_id
+        nodo = self.cb_nodo.currentData()
+        if nodo:
+            tarjeta.nodo_id = nodo.nodo_id
         tarjeta.tags = self.le_etiquetas.text()
         tipo_sensores = []
         if self.chkb_temperatura.isChecked():
@@ -63,13 +63,13 @@ class Registro(QDialog, Ui_registro):
             conector.agregar_tarjeta(tarjeta, tipo_sensores)
             self.accept()
 
-    def cargar_grupos(self):
-        self.cb_grupo.clear()
-        grupos = conector.consultar_grupos()
-        for grupo in grupos:
-            self.cb_grupo.addItem(grupo.nombre, grupo)
-        hay_grupos = bool(len(grupos))
-        return hay_grupos
+    def cargar_nodos(self):
+        self.cb_nodo.clear()
+        nodos = conector.consultar_nodos()
+        for nodo in nodos:
+            self.cb_nodo.addItem(nodo.nombre, nodo)
+        hay_nodos = bool(len(nodos))
+        return hay_nodos
 
     def validar_registro(self):
         errores = []
@@ -77,8 +77,8 @@ class Registro(QDialog, Ui_registro):
             errores.append("• Escribe un nombre para la tarjeta.")
         if not self.le_id.text().strip():
             errores.append("• Escribe un ID válido.")
-        if self.cb_grupo.currentData() is None:
-            errores.append("• Selecciona un grupo.")
+        if self.cb_nodo.currentData() is None:
+            errores.append("• Selecciona un nodo.")
         if not (
             self.chkb_temperatura.isChecked()
             or self.chkb_humedad.isChecked()

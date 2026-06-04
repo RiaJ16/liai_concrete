@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>389</width>
-    <height>328</height>
+    <width>416</width>
+    <height>326</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,10 +30,23 @@ QLabel{
 
 QCheckBox{
 	color: #F0F0F0;
+	padding: 2px;
 }
 
 QCheckBox::indicator {
-	color: black;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #7a7a7a;
+    background: white;
+}
+
+QCheckBox::indicator:checked {
+    background: #4aa8ff;
+    border: 1px solid #4aa8ff;
+}
+
+QCheckBox::checked{
+	border: 1px solid #4aa8ff;
 }
 
 QTextBrowser{
@@ -58,7 +71,7 @@ QPushButton{
       <widget class="QLineEdit" name="le_id"/>
      </item>
      <item row="2" column="1">
-      <widget class="QComboBox" name="cb_grupo"/>
+      <widget class="QComboBox" name="cb_nodo"/>
      </item>
      <item row="3" column="1">
       <widget class="QLineEdit" name="le_etiquetas"/>
@@ -132,16 +145,16 @@ QPushButton{
         <number>14</number>
        </property>
        <item>
-        <widget class="QLabel" name="icon_grupo">
+        <widget class="QLabel" name="icon_nodo">
          <property name="text">
           <string/>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="lbl_grupo">
+        <widget class="QLabel" name="lbl_nodo">
          <property name="text">
-          <string>Grupo</string>
+          <string>Nodo</string>
          </property>
         </widget>
        </item>

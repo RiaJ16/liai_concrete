@@ -186,7 +186,7 @@ color: black;</string>
      <string>Agregar...</string>
     </property>
     <addaction name="accion_dispositivo"/>
-    <addaction name="accion_grupo"/>
+    <addaction name="accion_nodo"/>
    </widget>
    <addaction name="menuAgregar"/>
   </widget>
@@ -196,9 +196,9 @@ color: black;</string>
     <string>Dispositivo</string>
    </property>
   </action>
-  <action name="accion_grupo">
+  <action name="accion_nodo">
    <property name="text">
-    <string>Grupo</string>
+    <string>Nodo</string>
    </property>
   </action>
  </widget>
