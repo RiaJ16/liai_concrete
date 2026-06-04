@@ -181,8 +181,26 @@ color: black;</string>
      <height>26</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuAgregar">
+    <property name="title">
+     <string>Agregar...</string>
+    </property>
+    <addaction name="accion_dispositivo"/>
+    <addaction name="accion_grupo"/>
+   </widget>
+   <addaction name="menuAgregar"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="accion_dispositivo">
+   <property name="text">
+    <string>Dispositivo</string>
+   </property>
+  </action>
+  <action name="accion_grupo">
+   <property name="text">
+    <string>Grupo</string>
+   </property>
+  </action>
  </widget>
  <resources>
   <include location="resources.qrc"/>

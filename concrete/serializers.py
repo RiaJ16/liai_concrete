@@ -151,15 +151,15 @@ class Registro(JsonMixin, MapperMixin):
 class Grupo(JsonMixin, MapperMixin):
 
     grupo_id: int = 0
-    grupo_nombre: str = ''
+    nombre: str = ''
 
-    def __init__(self, grupo_id=0, grupo_nombre=''):
+    def __init__(self, grupo_id=0, nombre=''):
         self.grupo_id = grupo_id
-        self.grupo_nombre = grupo_nombre
+        self.nombre = nombre
 
     @staticmethod
     def map_to_db_fields():
         return {
             'grupo_id': 'grupo_id',
-            'grupo_nombre': 'grupo_nombre',
+            'grupo_nombre': 'nombre',
         }

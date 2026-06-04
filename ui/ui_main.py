@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.10.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -11,14 +11,15 @@
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMenuBar, QScrollArea, QSizePolicy,
-    QSpacerItem, QStatusBar, QToolButton, QVBoxLayout,
-    QWidget)
+    QMainWindow, QMenu, QMenuBar, QScrollArea,
+    QSizePolicy, QSpacerItem, QStatusBar, QToolButton,
+    QVBoxLayout, QWidget)
 from . import resources_rc
 
 class Ui_main(object):
@@ -53,6 +54,10 @@ class Ui_main(object):
 "QScrollArea{\n"
 "	background-color: #152e3e;;\n"
 "}")
+        self.accion_dispositivo = QAction(main)
+        self.accion_dispositivo.setObjectName(u"accion_dispositivo")
+        self.accion_grupo = QAction(main)
+        self.accion_grupo.setObjectName(u"accion_grupo")
         self.centralwidget = QWidget(main)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -66,6 +71,16 @@ class Ui_main(object):
         self.horizontalLayout.setContentsMargins(-1, 0, -1, 0)
         self.btn_grafico = QToolButton(self.toolbar)
         self.btn_grafico.setObjectName(u"btn_grafico")
+        self.btn_grafico.setStyleSheet(u"QToolButton {\n"
+"    background-color: #1f2a36;\n"
+"    border-radius: 8px;\n"
+"    padding: 6px;\n"
+"}\n"
+"\n"
+"QToolButton:hover {\n"
+"    background-color: #33475b;\n"
+"}\n"
+"")
         icon = QIcon()
         icon.addFile(u":/main/icons/graphic_mode.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.btn_grafico.setIcon(icon)
@@ -123,10 +138,16 @@ class Ui_main(object):
         self.menubar = QMenuBar(main)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 795, 26))
+        self.menuAgregar = QMenu(self.menubar)
+        self.menuAgregar.setObjectName(u"menuAgregar")
         main.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(main)
         self.statusbar.setObjectName(u"statusbar")
         main.setStatusBar(self.statusbar)
+
+        self.menubar.addAction(self.menuAgregar.menuAction())
+        self.menuAgregar.addAction(self.accion_dispositivo)
+        self.menuAgregar.addAction(self.accion_grupo)
 
         self.retranslateUi(main)
 
@@ -135,7 +156,10 @@ class Ui_main(object):
 
     def retranslateUi(self, main):
         main.setWindowTitle(QCoreApplication.translate("main", u"LIAI Concreto", None))
+        self.accion_dispositivo.setText(QCoreApplication.translate("main", u"Dispositivo", None))
+        self.accion_grupo.setText(QCoreApplication.translate("main", u"Grupo", None))
         self.btn_grafico.setText(QCoreApplication.translate("main", u"1", None))
         self.label.setText("")
+        self.menuAgregar.setTitle(QCoreApplication.translate("main", u"Agregar...", None))
     # retranslateUi
 

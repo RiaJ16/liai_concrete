@@ -2,7 +2,7 @@
 
 from mysql.connector import pooling
 
-from concrete.serializers import Tarjeta, Sensor, Registro
+from concrete.serializers import Tarjeta, Sensor, Registro, Grupo
 from private import database
 
 _pool = pooling.MySQLConnectionPool(
@@ -23,6 +23,15 @@ def consultar(sql, params=None):
     with get_connection() as cnx, cnx.cursor(dictionary=True) as cursor:
         cursor.execute(sql, params)
         return list(cursor)
+
+def insertar(sql, args=None):
+    last_row_id = None
+    with get_connection(True) as cnx:
+        with cnx.cursor() as cursor:
+            cursor.execute(sql, args)
+            last_row_id = cursor.lastrowid
+            cnx.commit()
+    return last_row_id
 
 def consultar_tarjetas():
     sql = "SELECT * FROM tarjeta"
@@ -62,3 +71,43 @@ def consultar_registros(sensor_id, fecha_inicial, fecha_final):
         registro.update_from_dict(row)
         registros.append(registro)
     return registros
+
+def consultar_grupos():
+    sql = "SELECT * FROM grupo "
+    rows = consultar(sql)
+    grupos = []
+    for row in rows:
+        grupo = Grupo()
+        grupo.update_from_dict(row)
+        grupos.append(grupo)
+    return grupos
+
+def agregar_tarjeta(tarjeta, tipo_sensores):
+    sql = ("INSERT INTO tarjeta "
+           "(id_fisico, nombre, grupo_id, tags) "
+           "VALUES (%(id_fisico)s, %(nombre)s, %(grupo_id)s, %(tags)s)")
+    args = {
+        'id_fisico': tarjeta.id_fisico,
+        'nombre': tarjeta.nombre,
+        'grupo_id': tarjeta.grupo_id,
+        'tags': tarjeta.tags,
+    }
+    tarjeta_id = insertar(sql, args)
+    tarjeta.tarjeta_id = tarjeta_id
+    for tipo_sensor in tipo_sensores:
+        sensor = Sensor()
+        sensor.tipo = tipo_sensor
+        sensor.tarjeta_id = tarjeta_id
+        agregar_sensor(sensor)
+    return tarjeta
+
+def agregar_sensor(sensor):
+    sql = ("INSERT INTO sensor "
+           "(tarjeta_id, tipo) "
+           "VALUES (%(tarjeta_id)s, %(tipo)s)" )
+    args = {
+        'tarjeta_id': sensor.tarjeta_id,
+        'tipo': sensor.tipo
+    }
+    return insertar(sql, args)
+

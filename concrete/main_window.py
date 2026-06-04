@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, \
 from concrete import conector
 from concrete.board_widget import BoardMiniWidget
 from concrete.board_widget import BoardWidget
+from concrete.registro import Registro
 from concrete.sensor_widget import SensorWidget
 from ui.ui_main import Ui_main
 
@@ -23,6 +24,7 @@ class MainWindow(QMainWindow, Ui_main):
 
     def __signals__(self):
         self.btn_grafico.toggled.connect(self.swap_layout)
+        self.accion_dispositivo.triggered.connect(self.register_new)
 
     def set_main_layout(self):
         layout = QVBoxLayout()
@@ -37,18 +39,40 @@ class MainWindow(QMainWindow, Ui_main):
         self.widget_mini_boards.setVisible(not self.widget_mini_boards.isVisible())
 
     def populate_dashboard(self):
+        layout = self.widget_boards.layout()
+        if layout is None:
+            layout = QGridLayout(self.widget_boards)
+            self.widget_boards.setLayout(layout)
+        self.clear_layout(layout)
         tarjetas = conector.consultar_tarjetas()
-        num_tarjetas = len(tarjetas)
-        layout = QGridLayout()
-        for i in range(num_tarjetas):
-            layout.addWidget(BoardWidget(tarjetas[i]), 0, i)
-        self.widget_boards.setLayout(layout)
+        columns = 3
+        for i, tarjeta in enumerate(tarjetas):
+            row = i // columns
+            col = i % columns
+            layout.addWidget(BoardWidget(tarjeta), row, col)
+
+    @staticmethod
+    def clear_layout(layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
 
     def populate_with_mini(self):
+        layout = self.widget_mini_boards.layout()
+        if layout is None:
+            layout = QVBoxLayout(self.widget_mini_boards)
+            layout.setSpacing(1)
+            self.widget_mini_boards.setLayout(layout)
+        self.clear_layout(layout)
         tarjetas = conector.consultar_tarjetas()
-        layout = QVBoxLayout()
-        layout.setSpacing(1)
         for tarjeta in tarjetas:
             layout.addWidget(BoardMiniWidget(tarjeta))
         layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Expanding))
-        self.widget_mini_boards.setLayout(layout)
+
+    def register_new(self):
+        registro = Registro()
+        if registro.exec():
+            self.populate_dashboard()
+            self.populate_with_mini()
