@@ -1,10 +1,15 @@
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from PySide6.QtWidgets import QApplication, QStyleFactory
 from PySide6.QtGui import QGuiApplication, QPalette, QColor
 from PySide6 import QtXml
 
 from concrete.main_window import MainWindow
+
+
 
 app = QApplication(sys.argv)
 app.setStyle(QStyleFactory.create("Fusion"))

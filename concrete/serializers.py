@@ -62,20 +62,101 @@ class MapperMixin(ABC):
         pass
 
 
+# =====================================================================
+#  MODELO NUEVO:  Nodo -> Sensor -> Lectura
+# =====================================================================
+
+@dataclass
+class Nodo(JsonMixin, MapperMixin):
+
+    nodo_id: int = 0
+    mac: str = ''
+    nombre: str = ''
+
+    def __init__(self, nodo_id=0, mac='', nombre=''):
+        self.nodo_id = nodo_id
+        self.mac = mac
+        self.nombre = nombre
+
+    @staticmethod
+    def map_to_db_fields():
+        return {
+            'nodo_id': 'nodo_id',
+            'mac': 'mac',
+            'nombre': 'nombre',
+        }
+
+
+@dataclass
+class Sensor(JsonMixin, MapperMixin):
+
+    sensor_id: int = 0
+    nodo_id: int = None
+    nombre: str = ''
+
+    def __init__(self, sensor_id=0, nodo_id=None, nombre=''):
+        self.sensor_id = sensor_id
+        self.nodo_id = nodo_id
+        self.nombre = nombre
+
+    @staticmethod
+    def map_to_db_fields():
+        return {
+            'sensor_id': 'sensor_id',
+            'nodo_id': 'nodo_id',
+            'nombre': 'nombre',
+        }
+
+
+@dataclass
+class Lectura(JsonMixin, MapperMixin):
+
+    lectura_id: int = 0
+    sensor_id: int = None
+    numero_lectura: int = None
+    fecha: datetime = None
+    temp: float = None
+    hum: float = None
+
+    def __init__(self, lectura_id=0, sensor_id=None, numero_lectura=None,
+                 fecha=None, temp=None, hum=None):
+        self.lectura_id = lectura_id
+        self.sensor_id = sensor_id
+        self.numero_lectura = numero_lectura
+        self.fecha = fecha
+        self.temp = temp
+        self.hum = hum
+
+    @staticmethod
+    def map_to_db_fields():
+        return {
+            'lectura_id': 'lectura_id',
+            'sensor_id': 'sensor_id',
+            'numero_lectura': 'numero_lectura',
+            'fecha': 'fecha',
+            'temp': 'temp',
+            'hum': 'hum',
+        }
+
+
+# =====================================================================
+#  MODELO VIEJO (en desuso, se conservan para no romper imports antiguos)
+# =====================================================================
+
 @dataclass
 class Tarjeta(JsonMixin, MapperMixin):
 
     tarjeta_id: int = 0
     nombre: str = ''
     id_fisico: str = ''
-    nodo_id: int = None
+    grupo_id: int = None
     tags: list = None
 
-    def __init__(self, tarjeta_id=0, id_fisico='', nombre="", nodo_id=None, tags=None):
+    def __init__(self, tarjeta_id=0, id_fisico='', nombre="", grupo_id=None, tags=None):
         self.tarjeta_id = tarjeta_id
         self.id_fisico = id_fisico
         self.nombre = nombre
-        self.nodo_id = nodo_id
+        self.grupo_id = grupo_id
         self.tags = tags
 
     @staticmethod
@@ -84,7 +165,7 @@ class Tarjeta(JsonMixin, MapperMixin):
             'tarjeta_id': 'tarjeta_id',
             'id_fisico': 'id_fisico',
             'nombre': 'nombre',
-            'nodo_id': 'nodo_id',
+            'grupo_id': 'grupo_id',
             'tags': 'tags',
         }
 
@@ -94,35 +175,6 @@ class Tarjeta(JsonMixin, MapperMixin):
             'tags': lambda t: [s.strip() for s in t.split(',')] if t else []
         }
 
-
-@dataclass
-class Sensor(JsonMixin, MapperMixin):
-
-    sensor_id: int = 0
-    tarjeta_id: int = None
-    tipo: str = ''
-    dato: float = None
-    fecha_dato: datetime = None
-    unidades: str = ''
-
-    def __init__(self, sensor_id=0, tarjeta_id=None, tipo='', dato=None, fecha_dato=None, unidades=''):
-        self.sensor_id = sensor_id
-        self.tarjeta_id = tarjeta_id
-        self.tipo = tipo
-        self.dato = dato
-        self.fecha_dato = fecha_dato
-        self.unidades = unidades
-
-    @staticmethod
-    def map_to_db_fields():
-        return {
-            'sensor_id': 'sensor_id',
-            'tarjeta_id': 'tarjeta_id',
-            'tipo': 'tipo',
-            'dato': 'dato',
-            'fecha_dato': 'fecha_dato',
-            'unidades': 'unidades',
-        }
 
 @dataclass
 class Registro(JsonMixin, MapperMixin):
@@ -147,22 +199,20 @@ class Registro(JsonMixin, MapperMixin):
             'dato': 'dato',
         }
 
+
 @dataclass
-class Nodo(JsonMixin, MapperMixin):
+class Grupo(JsonMixin, MapperMixin):
 
-    nodo_id: int = 0
+    grupo_id: int = 0
     nombre: str = ''
-    id_fisico: str = ''
 
-    def __init__(self, nodo_id=0, nombre='', id_fisico=''):
-        self.nodo_id = nodo_id
+    def __init__(self, grupo_id=0, nombre=''):
+        self.grupo_id = grupo_id
         self.nombre = nombre
-        self.id_fisico = id_fisico
 
     @staticmethod
     def map_to_db_fields():
         return {
-            'nodo_id': 'nodo_id',
-            'nombre': 'nombre',
-            'id_fisico': 'id_fisico',
+            'grupo_id': 'grupo_id',
+            'grupo_nombre': 'nombre',
         }

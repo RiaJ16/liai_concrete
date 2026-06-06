@@ -1,17 +1,203 @@
-# Configuración de la base de datos
+# LIAI Concreto — Monitoreo de Curado de Concreto en Tiempo Real
 
-Para configurar la base de datos para poder hacer uso de este software, es necesario hacer 2 cosas:
+Aplicación de escritorio para el monitoreo continuo de la temperatura y la
+humedad durante el curado del concreto.
 
-1. Utilizar el archivo /database/liai_database.py para crear una base de datos.
-2. Crear el archivo en private/database.py con la siguiente estructura:
+---
+
+## Contexto
+
+El curado del concreto es uno de los procesos más críticos en la ingeniería
+civil y la construcción de infraestructura. Consiste en mantener un contenido
+de humedad y temperatura satisfactorio en el concreto recién colado durante sus
+primeros días, garantizando así que desarrolle la resistencia de diseño
+esperada y minimizando la aparición de fisuras por contracción plástica o
+térmica. Tradicionalmente, este control se realiza de forma manual, esporádica
+y propensa a errores humanos.
+
+Este proyecto implementa una **aplicación de escritorio multiplataforma** 
+para el **monitoreo en tiempo real** del curado. El sistema
+aprovecha tecnologías de **Internet de las Cosas (IoT)** mediante sensores
+embebidos directamente en las losas de concreto. Estos sensores registran de
+forma continua las variables críticas (temperatura y humedad) y las transmiten,
+a través de un **nodo receptor**, a una **base de datos en la nube
+(PostgreSQL / Supabase)** mediante peticiones **HTTP con datos estructurados en
+JSON**. La aplicación lee esa información y dota a los supervisores de obra,
+ingenieros residentes y clientes de una herramienta analítica centralizada para
+asegurar el cumplimiento de las normativas de calidad estructural.
+
+---
+
+## Arquitectura
+
+El flujo de datos es:
 
 ```
-	# -*- coding: utf-8 -*-
-	
-	login = {
-		'dbuser': '',
-		'dbpassword': '',
-		'host': '',
-		'database': '',
-	}
+Sensores (losa)  ─►  Nodo receptor  ─►  HTTP/JSON  ─►  Supabase (PostgreSQL)  ◄─►  App de escritorio
 ```
+
+- **Ingesta:** los sensores envían sus lecturas a una función en la nube que
+  crea automáticamente el nodo y el sensor la primera vez que los ve.
+- **Almacenamiento:** PostgreSQL en la nube, con el modelo
+  `nodo → sensor → lectura`.
+- **Aplicación:** lee de la base mediante una capa de datos desacoplada y
+  presenta el panel, el historial y las gráficas.
+
+El acceso a datos está en capas (modelos ORM → repositorios → *facade*), de modo
+que el proveedor de base de datos se cambia editando una sola variable de
+entorno, sin tocar la lógica de negocio.
+
+---
+
+## Tecnologías
+
+| Componente | Tecnología |
+|------------|------------|
+| Lenguaje | Python 3.11+ |
+| Interfaz gráfica | PySide6 (Qt 6) |
+| Gráficas | Matplotlib |
+| Acceso a datos / ORM | SQLAlchemy 2.0 |
+| Controlador PostgreSQL | psycopg2-binary |
+| Variables de entorno | python-dotenv |
+| Base de datos | PostgreSQL (Supabase) |
+
+> Las versiones exactas están fijadas en `requirements.txt`.
+
+---
+
+## Requerimientos previos
+
+- **Python 3.11 o superior** instalado.
+- **Conexión a internet** (la base de datos está en la nube).
+- Un **proyecto en Supabase** con el esquema de la base ya creado
+  (tablas `nodo`, `sensor`, `lectura` y la función de ingesta).
+- La **cadena de conexión** de ese proyecto (Session pooler).
+
+---
+
+## Guía de instalación
+
+### 1. Clonar el proyecto
+```bash
+git clone <url-del-repositorio>
+cd liai_concrete
+```
+
+### 2. Crear y activar el entorno virtual
+
+**Windows (PowerShell):**
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
+
+**macOS / Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Con el entorno activo verás `(venv)` al inicio de la línea de comandos.
+
+### 3. Instalar las dependencias
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar la base de datos (variable de entorno)
+
+La aplicación **requiere** un archivo `.env` en la raíz del proyecto con la
+cadena de conexión a PostgreSQL. Crea el archivo `.env` con este contenido
+(reemplazando con tus datos de Supabase):
+
+```
+DATABASE_URL=postgresql+psycopg2://postgres.<PROJECT_REF>:<TU_PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+> La cadena se obtiene en Supabase: botón **Connect → Session pooler (5432)**.
+> Se le antepone `+psycopg2` y se agrega `?sslmode=require` al final.
+> Si en el futuro migras a un servidor de PostgreSQL propio, basta con cambiar
+> esta línea: no se modifica ninguna línea de código.
+
+### 5. Ejecutar la aplicación
+```bash
+python main.py
+```
+
+Si todo está correcto, se abre el panel principal con los sensores que ya tengan
+datos en la nube.
+
+---
+
+## Requerimientos de usuario (funcionalidad actual)
+
+El sistema actualmente permite al usuario:
+
+- **Visualizar un panel** con todos los sensores activos, presentados como
+  tarjetas y **agrupados por su nodo**.
+- **Filtrar** los sensores por nodo y **buscar** por nombre.
+- Ver el **valor actual** de temperatura y humedad de cada sensor.
+- Consultar el **historial** de un sensor (tabla + gráfica de temperatura y
+  humedad) dentro de un **rango de fechas**, que por defecto abarca del primer
+  al último registro.
+- **Etiquetar** sensores y nodos con nombres legibles (p. ej. "Losa Norte").
+- **Eliminar** sensores o nodos que ya no se usen.
+- Recibir lecturas **automáticamente** desde los sensores: los nodos y sensores
+  se dan de alta solos al llegar la primera lectura.
+
+Las fechas se almacenan en UTC y se muestran en la hora local del equipo.
+
+---
+
+## Estructura del proyecto
+
+### Raíz
+| Archivo | Propósito |
+|---------|-----------|
+| `main.py` | Punto de entrada. Carga el `.env` y abre la ventana principal. |
+| `.env` | Variables de entorno (cadena de conexión). **No se versiona.** |
+| `requirements.txt` | Dependencias de Python del proyecto. |
+| `sembrar_datos.py` | Script para poblar la base con datos de prueba vía la función de ingesta. |
+| `CHANGELOG.md` | Registro de cambios del proyecto. |
+| `README.md` | Este documento. |
+| `LICENSE` | Licencia del software. |
+| `.gitignore` / `.gitattributes` | Configuración de Git. |
+
+### `concrete/` — Lógica de la aplicación
+| Archivo | Propósito |
+|---------|-----------|
+| `main_window.py` | Ventana principal: panel de sensores, filtro por nodo, búsqueda y menú. |
+| `board_widget.py` | Tarjetas del panel (`BoardWidget` y `BoardMiniWidget`) que representan un sensor. |
+| `sensor_widget.py` | Muestra los valores actuales (temperatura/humedad) dentro de una tarjeta. |
+| `sensor_mini_widget.py` | Versión compacta del sensor para el modo de vista reducida. |
+| `data.py` | Ventana de historial de un sensor: tabla de lecturas + gráfica. |
+| `chart_widget.py` | Lienzo de la gráfica (Matplotlib) de temperatura y humedad. |
+| `registro.py` | Diálogo para administrar sensores: etiquetar, nombrar nodos y eliminar. |
+| `conector.py` | *Facade* de acceso a datos: traduce entre la interfaz y la base. |
+| `serializers.py` | Clases de datos (`Nodo`, `Sensor`, `Lectura`) y mapeo diccionario↔objeto. |
+
+### `concrete/db/` — Capa de datos
+| Archivo | Propósito |
+|---------|-----------|
+| `engine.py` | Conexión a PostgreSQL leyendo `DATABASE_URL`. Único punto que conoce el proveedor. |
+| `models.py` | Modelos ORM (`Nodo`, `Sensor`, `Lectura`) con SQLAlchemy. |
+| `repositories.py` | Patrón Repositorio: consultas y escrituras encapsuladas por entidad. |
+| `__init__.py` | Expone la capa de datos. |
+
+### `ui/` — Interfaz generada con Qt Designer
+| Elemento | Propósito |
+|----------|-----------|
+| `*.ui` | Diseños visuales de Qt Designer (`board`, `board_mini`, `data`, `main`, `registro`, `sensor`). |
+| `ui_*.py` | Código Python generado a partir de los `.ui`. **No editar a mano** (se regenera). |
+| `resources.qrc` / `resources_rc.py` | Recursos (iconos e imágenes) empaquetados para Qt. |
+| `icons/` | Iconos de la interfaz (modos gráfico/tabla, humedad, temperatura). |
+| `images/` | Imágenes de la interfaz (logotipo, ilustraciones de tableros). |
+
+---
+
+## Notas
+
+- Toda la información se almacena en la nube; la aplicación requiere conexión a
+  internet para funcionar.
+- El `.env` no se incluye en el repositorio por seguridad; cada usuario debe
+  crearlo con su propia cadena de conexión.

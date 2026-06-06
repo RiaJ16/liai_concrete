@@ -1,122 +1,156 @@
 # conector.py
+"""
+Capa de acceso a datos sobre PostgreSQL/Supabase.
 
-from mysql.connector import pooling
+Modelo: nodo (receptor, agrupa) -> sensor (unidad monitoreada) -> lectura.
+El dashboard muestra UNA tarjeta por SENSOR; el nodo es la agrupación.
+"""
 
-from concrete.serializers import Tarjeta, Sensor, Registro, Nodo
-from private import database
+from types import SimpleNamespace
 
-_pool = pooling.MySQLConnectionPool(
-    pool_name="htechpool",
-    pool_size=1,
-    user=database.login['dbuser'],
-    password=database.login['dbpassword'],
-    host='localhost',
-    database='liai_concrete',
+from concrete.serializers import Tarjeta, Nodo, Sensor, Lectura
+from concrete.db import (
+    session_scope,
+    NodoRepository,
+    SensorRepository,
+    LecturaRepository,
 )
 
-def get_connection(autocommit=False):
-    cnx = _pool.get_connection()
-    cnx.autocommit = autocommit
-    return cnx
 
-def consultar(sql, params=None):
-    with get_connection() as cnx, cnx.cursor(dictionary=True) as cursor:
-        cursor.execute(sql, params)
-        return list(cursor)
+def _renglon(tipo, dato, unidades, sensor_id, campo):
+    return SimpleNamespace(tipo=tipo, dato=dato, unidades=unidades,
+                           sensor_id=sensor_id, campo=campo)
 
-def insertar(sql, args=None):
-    last_row_id = None
-    with get_connection(True) as cnx:
-        with cnx.cursor() as cursor:
-            cursor.execute(sql, args)
-            last_row_id = cursor.lastrowid
-            cnx.commit()
-    return last_row_id
 
-def consultar_tarjetas():
-    sql = "SELECT * FROM tarjeta"
-    rows = consultar(sql)
-    tarjetas = []
-    for row in rows:
-        tarjeta = Tarjeta()
-        tarjeta.update_from_dict(row)
-        tarjetas.append(tarjeta)
-    return tarjetas
+# =====================================================================
+#  API que consume la UI
+# =====================================================================
 
-def consultar_sensores_por_tarjeta(tarjeta_id):
-    sql = ("SELECT sensor.*, tipo.etiqueta as tipo, tipo.unidades FROM sensor "
-           "LEFT JOIN tipo ON sensor.tipo = tipo.tipo_id "
-           f"WHERE sensor.tarjeta_id = {tarjeta_id}")
-    rows = consultar(sql)
-    sensores = []
-    for row in rows:
-        sensor = Sensor()
-        sensor.update_from_dict(row)
-        sensores.append(sensor)
-    return sensores
+def consultar_tarjetas(nodo_id=None):
+    """
+    Cada SENSOR es una tarjeta. El nodo va como etiqueta de agrupación.
+    Si nodo_id se da, sólo devuelve los sensores de ese nodo (filtro).
+    """
+    with session_scope() as s:
+        filas = SensorRepository(s).listar_con_nodo(nodo_id)
+        tarjetas = []
+        for sensor, nodo in filas:
+            etiqueta_nodo = nodo.nombre or nodo.mac
+            nombre = sensor.alias or sensor.nombre
+            tarjetas.append(Tarjeta(
+                tarjeta_id=sensor.sensor_id,
+                id_fisico=nodo.mac,
+                nombre=nombre,
+                grupo_id=nodo.nodo_id,
+                tags=[etiqueta_nodo],
+            ))
+        return tarjetas
 
-def consultar_registros(sensor_id, fecha_inicial, fecha_final):
-    sql = ("SELECT * FROM registro WHERE sensor_id = %(sensor_id)s "
-           "AND fecha BETWEEN %(fecha_inicial)s AND %(fecha_final)s "
-           "ORDER BY fecha DESC")
-    args = {
-        'sensor_id': sensor_id,
-        'fecha_inicial': fecha_inicial,
-        'fecha_final': fecha_final,
-    }
-    rows = consultar(sql, args)
-    registros = []
-    for row in rows:
-        registro = Registro()
-        registro.update_from_dict(row)
-        registros.append(registro)
-    return registros
+
+def consultar_sensores_por_tarjeta(sensor_id):
+    """Renglones Temperatura/Humedad con el último valor de ese sensor."""
+    with session_scope() as s:
+        ultima = LecturaRepository(s).ultima(sensor_id)
+        temp = ultima.temp if ultima else None
+        hum = ultima.hum if ultima else None
+        return [
+            _renglon('Temperatura', temp, '°C', sensor_id, 'temp'),
+            _renglon('Humedad', hum, '%', sensor_id, 'hum'),
+        ]
+
+
+# =====================================================================
+#  Gestión / etiquetado / eliminación (diálogo)
+# =====================================================================
+
+def consultar_sensores():
+    """Detalle de cada sensor + su nodo, para el diálogo."""
+    with session_scope() as s:
+        filas = SensorRepository(s).listar_con_nodo()
+        return [
+            SimpleNamespace(
+                sensor_id=sensor.sensor_id,
+                nombre=sensor.nombre,
+                alias=sensor.alias,
+                nodo_id=nodo.nodo_id,
+                nodo_nombre=nodo.nombre,
+                mac=nodo.mac,
+            )
+            for sensor, nodo in filas
+        ]
+
+
+def renombrar_sensor(sensor_id, alias):
+    with session_scope() as s:
+        SensorRepository(s).actualizar_alias(sensor_id, alias)
+
+
+def renombrar_nodo(nodo_id, nombre):
+    with session_scope() as s:
+        NodoRepository(s).actualizar_nombre(nodo_id, nombre)
+
+
+def eliminar_sensor(sensor_id):
+    """Borra un sensor y todas sus lecturas (cascada)."""
+    with session_scope() as s:
+        SensorRepository(s).eliminar(sensor_id)
+
+
+def eliminar_nodo(nodo_id):
+    """Borra un nodo con todos sus sensores y lecturas (cascada)."""
+    with session_scope() as s:
+        NodoRepository(s).eliminar(nodo_id)
+
+
+# =====================================================================
+#  API nueva / hardware
+# =====================================================================
+
+def _nodo_to_serializer(n):
+    nodo = Nodo()
+    nodo.update_from_dict({"nodo_id": n.nodo_id, "mac": n.mac, "nombre": n.nombre})
+    return nodo
+
+
+def _lectura_to_serializer(l):
+    lectura = Lectura()
+    lectura.update_from_dict({
+        "lectura_id": l.lectura_id, "sensor_id": l.sensor_id,
+        "numero_lectura": l.numero_lectura, "fecha": l.fecha,
+        "temp": l.temp, "hum": l.hum,
+    })
+    return lectura
+
 
 def consultar_nodos():
-    sql = "SELECT * FROM nodo "
-    rows = consultar(sql)
-    nodos = []
-    for row in rows:
-        nodo = Nodo()
-        nodo.update_from_dict(row)
-        nodos.append(nodo)
-    return nodos
+    with session_scope() as s:
+        return [_nodo_to_serializer(n) for n in NodoRepository(s).listar()]
 
-def agregar_tarjeta(tarjeta, tipo_sensores):
-    sql = ("INSERT INTO tarjeta "
-           "(id_fisico, nombre, nodo_id, tags) "
-           "VALUES (%(id_fisico)s, %(nombre)s, %(nodo_id)s, %(tags)s)")
-    args = {
-        'id_fisico': tarjeta.id_fisico,
-        'nombre': tarjeta.nombre,
-        'nodo_id': tarjeta.nodo_id,
-        'tags': tarjeta.tags,
-    }
-    tarjeta_id = insertar(sql, args)
-    tarjeta.tarjeta_id = tarjeta_id
-    for tipo_sensor in tipo_sensores:
-        sensor = Sensor()
-        sensor.tipo = tipo_sensor
-        sensor.tarjeta_id = tarjeta_id
-        agregar_sensor(sensor)
-    return tarjeta
 
-def agregar_sensor(sensor):
-    sql = ("INSERT INTO sensor "
-           "(tarjeta_id, tipo) "
-           "VALUES (%(tarjeta_id)s, %(tipo)s)")
-    args = {
-        'tarjeta_id': sensor.tarjeta_id,
-        'tipo': sensor.tipo
-    }
-    return insertar(sql, args)
+def consultar_lecturas(sensor_id, fecha_inicial, fecha_final):
+    with session_scope() as s:
+        filas = LecturaRepository(s).graficar(sensor_id, fecha_inicial, fecha_final)
+        return [_lectura_to_serializer(l) for l in filas]
 
-def agregar_nodo(nodo):
-    sql = ("INSERT INTO nodo "
-           "(nombre, id_fisico) "
-           "VALUES (%(nombre)s, %(id_fisico)s)")
-    args = {
-        'nombre': nodo.nombre,
-        'id_fisico': nodo.id_fisico
-    }
-    return insertar(sql, args)
+
+def rango_fechas_sensor(sensor_id):
+    """(fecha_min, fecha_max) de las lecturas del sensor, o (None, None)."""
+    with session_scope() as s:
+        return LecturaRepository(s).rango_fechas(sensor_id)
+
+
+def consultar_lecturas_sensor(sensor_id):
+    """Todas las lecturas de un sensor (para cargar el historial de una sola vez)."""
+    with session_scope() as s:
+        return [_lectura_to_serializer(l) for l in LecturaRepository(s).todas(sensor_id)]
+
+
+def registrar_lectura_desde_hardware(mac, nombre_sensor, fecha,
+                                     temp=None, hum=None, numero_lectura=None):
+    with session_scope() as s:
+        nodo = NodoRepository(s).obtener_o_crear(mac=mac)
+        sensor = SensorRepository(s).obtener_o_crear(nodo_id=nodo.nodo_id, nombre=nombre_sensor)
+        return LecturaRepository(s).crear(
+            sensor_id=sensor.sensor_id, fecha=fecha, temp=temp, hum=hum,
+            numero_lectura=numero_lectura,
+        ).lectura_id

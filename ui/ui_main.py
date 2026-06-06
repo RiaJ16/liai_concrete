@@ -56,8 +56,8 @@ class Ui_main(object):
 "}")
         self.accion_dispositivo = QAction(main)
         self.accion_dispositivo.setObjectName(u"accion_dispositivo")
-        self.accion_nodo = QAction(main)
-        self.accion_nodo.setObjectName(u"accion_nodo")
+        self.accion_grupo = QAction(main)
+        self.accion_grupo.setObjectName(u"accion_grupo")
         self.centralwidget = QWidget(main)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -147,7 +147,7 @@ class Ui_main(object):
 
         self.menubar.addAction(self.menuAgregar.menuAction())
         self.menuAgregar.addAction(self.accion_dispositivo)
-        self.menuAgregar.addAction(self.accion_nodo)
+        self.menuAgregar.addAction(self.accion_grupo)
 
         self.retranslateUi(main)
 
@@ -157,7 +157,7 @@ class Ui_main(object):
     def retranslateUi(self, main):
         main.setWindowTitle(QCoreApplication.translate("main", u"LIAI Concreto", None))
         self.accion_dispositivo.setText(QCoreApplication.translate("main", u"Dispositivo", None))
-        self.accion_nodo.setText(QCoreApplication.translate("main", u"Nodo", None))
+        self.accion_grupo.setText(QCoreApplication.translate("main", u"Grupo", None))
         self.btn_grafico.setText(QCoreApplication.translate("main", u"1", None))
         self.label.setText("")
         self.menuAgregar.setTitle(QCoreApplication.translate("main", u"Agregar...", None))

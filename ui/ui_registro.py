@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'registro.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.1
+## Created by: Qt User Interface Compiler version 6.10.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -24,7 +24,7 @@ class Ui_registro(object):
     def setupUi(self, registro):
         if not registro.objectName():
             registro.setObjectName(u"registro")
-        registro.resize(416, 326)
+        registro.resize(389, 328)
         registro.setStyleSheet(u"QWidget#registro{\n"
 "	background-color: #1f1f23;\n"
 "}\n"
@@ -41,23 +41,10 @@ class Ui_registro(object):
 "\n"
 "QCheckBox{\n"
 "	color: #F0F0F0;\n"
-"	padding: 2px;\n"
 "}\n"
 "\n"
 "QCheckBox::indicator {\n"
-"    width: 18px;\n"
-"    height: 18px;\n"
-"    border: 1px solid #7a7a7a;\n"
-"    background: white;\n"
-"}\n"
-"\n"
-"QCheckBox::indicator:checked {\n"
-"    background: #4aa8ff;\n"
-"    border: 1px solid #4aa8ff;\n"
-"}\n"
-"\n"
-"QCheckBox::checked{\n"
-"	border: 1px solid #4aa8ff;\n"
+"	color: black;\n"
 "}\n"
 "\n"
 "QTextBrowser{\n"
@@ -83,10 +70,10 @@ class Ui_registro(object):
 
         self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.le_id)
 
-        self.cb_nodo = QComboBox(registro)
-        self.cb_nodo.setObjectName(u"cb_nodo")
+        self.cb_grupo = QComboBox(registro)
+        self.cb_grupo.setObjectName(u"cb_grupo")
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.cb_nodo)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.cb_grupo)
 
         self.le_etiquetas = QLineEdit(registro)
         self.le_etiquetas.setObjectName(u"le_etiquetas")
@@ -144,15 +131,15 @@ class Ui_registro(object):
         self.horizontalLayout_5 = QHBoxLayout()
         self.horizontalLayout_5.setSpacing(14)
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.icon_nodo = QLabel(registro)
-        self.icon_nodo.setObjectName(u"icon_nodo")
+        self.icon_grupo = QLabel(registro)
+        self.icon_grupo.setObjectName(u"icon_grupo")
 
-        self.horizontalLayout_5.addWidget(self.icon_nodo)
+        self.horizontalLayout_5.addWidget(self.icon_grupo)
 
-        self.lbl_nodo = QLabel(registro)
-        self.lbl_nodo.setObjectName(u"lbl_nodo")
+        self.lbl_grupo = QLabel(registro)
+        self.lbl_grupo.setObjectName(u"lbl_grupo")
 
-        self.horizontalLayout_5.addWidget(self.lbl_nodo)
+        self.horizontalLayout_5.addWidget(self.lbl_grupo)
 
 
         self.formLayout.setLayout(2, QFormLayout.ItemRole.LabelRole, self.horizontalLayout_5)
@@ -222,8 +209,8 @@ class Ui_registro(object):
         self.lbl_nombre.setText(QCoreApplication.translate("registro", u"Nombre", None))
         self.icon_id.setText("")
         self.lbl_id.setText(QCoreApplication.translate("registro", u"ID", None))
-        self.icon_nodo.setText("")
-        self.lbl_nodo.setText(QCoreApplication.translate("registro", u"Nodo", None))
+        self.icon_grupo.setText("")
+        self.lbl_grupo.setText(QCoreApplication.translate("registro", u"Grupo", None))
         self.icon_tags.setText("")
         self.lbl_etiquetas.setText(QCoreApplication.translate("registro", u"Etiquetas", None))
         self.icon_sensores.setText("")
