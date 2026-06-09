@@ -1,11 +1,12 @@
+import csv
 from datetime import timedelta
 
 from PySide6 import QtWidgets
 from PySide6.QtCore import QDateTime
-from PySide6.QtGui import Qt
+from PySide6.QtGui import Qt, QColor, QBrush
 from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, \
     QTableWidgetItem, QAbstractItemView, QSplitter, QHBoxLayout, QTableWidget, \
-    QApplication
+    QApplication, QPushButton, QFileDialog, QMessageBox
 
 from concrete import conector
 from concrete.chart_widget import ChartWidget
@@ -26,6 +27,9 @@ class DataWidget(QWidget, Ui_data):
         self.splitter.setStretchFactor(1, 1)   # gráfica: ocupa el resto
         self.layout().insertWidget(0, self.splitter)
         self.resize(1100, 560)
+        self.btn_exportar = QPushButton("Exportar CSV")
+        self.layout().addWidget(self.btn_exportar)
+        self.btn_exportar.clicked.connect(self._exportar_csv)
         self.tarjeta = None
         self.sensores = []
         self._lecturas = []
@@ -43,6 +47,7 @@ class DataWidget(QWidget, Ui_data):
 
     def mostrar_datos(self, tarjeta, sensores):
         self.setWindowTitle(f'Datos de {tarjeta.nombre}')
+        self.tarjeta = tarjeta
         self.sensores = sensores
         self._rango_manual = False
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -64,6 +69,40 @@ class DataWidget(QWidget, Ui_data):
         if not self._rango_manual:
             self._ajustar_rango_fechas()   # extiende el rango a los datos nuevos
         self.consultar_datos()
+
+    def _exportar_csv(self):
+        if not self.sensores or not self.tarjeta:
+            return
+        ruta, _ = QFileDialog.getSaveFileName(
+            self, "Exportar CSV", f"{self.tarjeta.nombre}.csv", "CSV (*.csv)")
+        if not ruta:
+            return
+        fi = self.fecha_inicial.dateTime().toPython().astimezone()
+        ff = self.fecha_final.dateTime().toPython().astimezone()
+        lecturas = sorted(
+            (l for l in self._lecturas if fi <= l.fecha <= ff),
+            key=lambda r: r.fecha,
+        )
+        mac = self.tarjeta.id_fisico
+        nodo_nombre = self.tarjeta.tags[0] if self.tarjeta.tags else ""
+        sensor = self.tarjeta.nombre
+        columnas = ["mac", "nodo_nombre", "sensor", "numero_lectura",
+                    "fecha_utc", "fecha_local", "temp", "hum"]
+        try:
+            with open(ruta, "w", newline="", encoding="utf-8-sig") as f:
+                w = csv.writer(f)
+                w.writerow(columnas)
+                for l in lecturas:
+                    w.writerow([
+                        mac, nodo_nombre, sensor, l.numero_lectura,
+                        l.fecha.isoformat(),
+                        l.fecha.astimezone().strftime("%Y-%m-%d %H:%M:%S"),
+                        l.temp, l.hum,
+                    ])
+            QMessageBox.information(self, "Exportación",
+                                   f"Se exportaron {len(lecturas)} lecturas a:\n{ruta}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"No se pudo exportar: {e}")
 
     def _ajustar_rango_fechas(self):
         if not self._lecturas:
@@ -117,6 +156,7 @@ class DataWidget(QWidget, Ui_data):
 
         # Columnas de valores (Temperatura / Humedad)
         series = {}
+        filas_alerta = set()   # filas cuya humedad bajó del umbral
         for sensor in self.sensores:
             col = self.widget_table.columnCount()
             self.widget_table.insertColumn(col)
@@ -132,7 +172,20 @@ class DataWidget(QWidget, Ui_data):
                 item = QTableWidgetItem(texto)
                 item.setTextAlignment(Qt.AlignRight)
                 self.widget_table.setItem(row, col, item)
+                # Humedad por debajo del umbral -> marcar la fila.
+                if sensor.campo == "hum" and valor is not None \
+                        and valor < conector.UMBRAL_HUM_MIN:
+                    filas_alerta.add(row)
             series[sensor.tipo] = valores
+
+        # Resaltar (fondo rojo claro) las filas con humedad baja.
+        if filas_alerta:
+            fondo = QBrush(QColor("#fdecea"))
+            for row in filas_alerta:
+                for col in range(self.widget_table.columnCount()):
+                    item = self.widget_table.item(row, col)
+                    if item is not None:
+                        item.setBackground(fondo)
 
         if fechas:
             self.widget_chart.plot_data(fechas, series)

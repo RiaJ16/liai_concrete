@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, \
     QSizePolicy, QHBoxLayout
 
@@ -7,17 +9,19 @@ from concrete.sensor_widget import SensorWidget
 from ui.ui_board import Ui_board
 from ui.ui_board_mini import Ui_board_mini
 
+# Minutos sin reportar tras los cuales el sensor se marca como "caído" (rojo).
+UMBRAL_SIN_REPORTAR_MIN = 90
+
 
 class BaseBoardWidget(QWidget):
 
     def __init__(self, tarjeta, abrir_historial=None, parent=None):
         super().__init__(parent)
         self.tarjeta = tarjeta
-        # Callback que abre el historial (lo provee la ventana principal).
         self.abrir_historial = abrir_historial
-        self.sensores = conector.consultar_sensores_por_tarjeta(
-            self.tarjeta.tarjeta_id
-        )
+        # Los renglones (Temperatura/Humedad) ya vienen en la tarjeta, calculados
+        # en una sola consulta. NO se consulta la nube aquí (no bloquea la UI).
+        self.sensores = getattr(tarjeta, "sensores", None) or []
 
     def mostrar_datos(self, event):
         if self.abrir_historial is not None:
@@ -31,6 +35,31 @@ class BaseBoardWidget(QWidget):
             label = QLabel(tag)
             self.customize_tag_label(label)   # hook
             layout.insertWidget(layout.count() - 1, label)
+        # Indicador "última vez visto" con color de alerta.
+        texto, alerta = self._estado_ultima()
+        estado = QLabel(texto)
+        self.customize_tag_label(estado)
+        color = "#e74c3c" if alerta else "#2ecc71"
+        peso = "bold" if alerta else "normal"
+        estado.setStyleSheet(f"color: {color}; font-weight: {peso};")
+        layout.insertWidget(layout.count() - 1, estado)
+
+    def _estado_ultima(self):
+        """Devuelve (texto, alerta) según hace cuánto reportó el sensor."""
+        ult = getattr(self.tarjeta, "ultima_fecha", None)
+        if ult is None:
+            return "sin datos", True
+        minutos = (datetime.now(timezone.utc) - ult).total_seconds() / 60
+        alerta = minutos > UMBRAL_SIN_REPORTAR_MIN
+        if minutos < 1:
+            texto = "hace <1 min"
+        elif minutos < 60:
+            texto = f"hace {int(minutos)} min"
+        elif minutos < 60 * 24:
+            texto = f"hace {int(minutos // 60)} h"
+        else:
+            texto = f"hace {int(minutos // (60 * 24))} d"
+        return texto, alerta
 
     # Hook for subclasses
     def customize_tag_label(self, label):

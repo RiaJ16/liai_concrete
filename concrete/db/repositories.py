@@ -4,7 +4,7 @@
 from datetime import datetime
 
 from sqlalchemy import select, delete, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from .models import Nodo, Sensor, Lectura
 
@@ -51,6 +51,45 @@ class SensorRepository:
     def listar_con_nodo(self, nodo_id: int | None = None) -> list[tuple[Sensor, Nodo]]:
         """Sensores junto con su nodo. Si nodo_id se da, filtra por ese nodo."""
         stmt = select(Sensor, Nodo).join(Nodo, Sensor.nodo_id == Nodo.nodo_id)
+        if nodo_id is not None:
+            stmt = stmt.where(Nodo.nodo_id == nodo_id)
+        stmt = stmt.order_by(Nodo.nodo_id, Sensor.sensor_id)
+        return list(self.session.execute(stmt).all())
+
+    def listar_con_nodo_y_ultima(self, nodo_id: int | None = None):
+        """Sensores + su nodo + la fecha de su última lectura (para 'última vez visto')."""
+        sub = (
+            select(Lectura.sensor_id.label("sid"),
+                   func.max(Lectura.fecha).label("ultima"))
+            .group_by(Lectura.sensor_id)
+            .subquery()
+        )
+        stmt = (
+            select(Sensor, Nodo, sub.c.ultima)
+            .join(Nodo, Sensor.nodo_id == Nodo.nodo_id)
+            .outerjoin(sub, sub.c.sid == Sensor.sensor_id)
+        )
+        if nodo_id is not None:
+            stmt = stmt.where(Nodo.nodo_id == nodo_id)
+        stmt = stmt.order_by(Nodo.nodo_id, Sensor.sensor_id)
+        return list(self.session.execute(stmt).all())
+
+    def listar_con_nodo_y_ultima_lectura(self, nodo_id: int | None = None):
+        """Sensores + su nodo + su ÚLTIMA lectura completa (temp/hum/fecha), en
+        UNA sola consulta. Usa DISTINCT ON (sensor_id) de Postgres, que aprovecha
+        el índice (sensor_id, fecha DESC). Devuelve filas (Sensor, Nodo, Lectura|None)."""
+        ult_sq = (
+            select(Lectura)
+            .order_by(Lectura.sensor_id, Lectura.fecha.desc())
+            .distinct(Lectura.sensor_id)
+            .subquery()
+        )
+        UL = aliased(Lectura, ult_sq)
+        stmt = (
+            select(Sensor, Nodo, UL)
+            .join(Nodo, Sensor.nodo_id == Nodo.nodo_id)
+            .outerjoin(UL, UL.sensor_id == Sensor.sensor_id)
+        )
         if nodo_id is not None:
             stmt = stmt.where(Nodo.nodo_id == nodo_id)
         stmt = stmt.order_by(Nodo.nodo_id, Sensor.sensor_id)
@@ -127,6 +166,16 @@ class LecturaRepository:
         self.session.add(lectura)
         self.session.flush()
         return lectura
+
+    def exportar_todo(self):
+        """Todas las lecturas con su sensor y nodo (join), ordenadas."""
+        stmt = (
+            select(Lectura, Sensor, Nodo)
+            .join(Sensor, Lectura.sensor_id == Sensor.sensor_id)
+            .join(Nodo, Sensor.nodo_id == Nodo.nodo_id)
+            .order_by(Nodo.nodo_id, Sensor.sensor_id, Lectura.fecha)
+        )
+        return list(self.session.execute(stmt).all())
 
     def crear_lote(self, lecturas: list[dict]) -> int:
         self.session.bulk_insert_mappings(Lectura, lecturas)

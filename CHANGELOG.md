@@ -1,97 +1,98 @@
 # Changelog
 
-## Tiempo real y mejoras de interfaz
+Todos los cambios relevantes de **LIAI Concreto** se documentan aquí.
 
-Funcionalidad añadida sobre la migración a Supabase/PostgreSQL.
+## [2.1.0] - 2026-06-09
 
-### Tiempo real
-- Auto-refresco automático cada 30 s del panel principal (detecta sensores,
-  nodos o cambios nuevos) y del historial abierto (tabla y gráficas), sin
-  cerrar ni reabrir la aplicación. Conserva el scroll, el filtro y, si el
-  usuario movió el rango de fechas a mano, respeta su selección.
-- Ventana de historial **única y reutilizable** (vive en la ventana principal)
-  en lugar de una por tarjeta: el historial abierto sobrevive a los refrescos
-  del panel y se deja de crear una gráfica por cada tarjeta.
+Monitoreo en tiempo real, alertas de curado, exportación a CSV y una
+optimización de rendimiento que elimina los congelamientos de la interfaz.
 
-### Interfaz del historial
-- Columna **No. señal** (numero_lectura) en la tabla.
-- Orden de columnas: No. señal → Fecha → Temperatura → Humedad.
-- Tabla ajustada al ancho de su contenido (sin margen vacío ni scroll
-  horizontal); la gráfica ocupa el espacio restante y queda más ancha.
-- Cursor de "cargando" al abrir un sensor.
+### Added
+- **Alertas de humedad** por debajo del umbral (`UMBRAL_HUM_MIN = 85.0`): el
+  valor se resalta en rojo y negrita en la **tarjeta** y en la **vista mini**, y
+  las **filas del historial** por debajo del umbral salen con fondo rojo claro.
+- **Estado "última vez visto"** en la tarjeta: *hace X min/h/d* en verde, o en
+  rojo si el sensor lleva más de 90 min sin reportar
+  (`UMBRAL_SIN_REPORTAR_MIN = 90`).
+- **Auto-refresco cada 30 s** (`INTERVALO_REFRESCO_MS`) conservando la posición
+  del scroll y el filtro activo.
+- **Exportación a CSV** para reportes y entrenamiento de ML:
+  - Historial → botón "Exportar CSV": lecturas del sensor abierto en el rango
+    visible.
+  - Menú → "Exportar todo a CSV": toda la base con columnas completas
+    (`lectura_id, nodo_id, mac, nodo_nombre, sensor_id, sensor_nombre, alias,
+    numero_lectura, fecha_utc, fecha_local, temp, hum, manual`).
+  - Codificación `utf-8-sig` y fecha en UTC + hora local.
+- **Carga de datos en segundo plano** con `QThreadPool`; nuevo
+  `concrete/workers.py`.
+- Consulta única `DISTINCT ON (sensor_id)` para traer la última lectura de todos
+  los sensores en un solo viaje (aprovecha el índice `(sensor_id, fecha DESC)`).
 
-### Ventana principal
-- Tamaño fijo (no redimensionable con el mouse), 2 columnas y scroll vertical.
-- Corrección del parpadeo de la interfaz al arrancar.
+### Changed
+- Las consultas a Supabase ya **no corren en el hilo de la interfaz**: se
+  ejecutan en segundo plano y el resultado se entrega por señales.
+- **Una sola consulta por refresco** en lugar de `2N+3`: las tarjetas ya no
+  consultan la nube en su constructor (leen la última lectura adjunta).
+- La **búsqueda por texto** y el **cambio de vista** (grande/mini) filtran la
+  caché en memoria; ya no vuelven a consultar la nube (respuesta instantánea).
+- Se evita el solapamiento de cargas (guarda `self._cargando`) para no saturar
+  el *pooler* de Supabase.
+- `sembrar_datos.py` reescrito como **inyector de lecturas en tiempo real**
+  (para probar el flujo en vivo).
+- La ventana de historial es **única y reutilizable**; si está abierta, también
+  se refresca con los datos nuevos.
 
-### Pruebas
-- `sembrar_datos.py` reescrito como inyector en tiempo real: envía lecturas
-  con valores aleatorios suaves cada minuto, en bucle, hasta detenerlo (Ctrl+C).
+### Fixed
+- **Ventana en blanco al arrancar** y **congelamiento durante la operación**,
+  causados por las consultas de red en el hilo de la interfaz.
 
-## Migración a Supabase/PostgreSQL y rediseño del modelo
+## [2.0.0] - 2026-06-06
 
 Migración completa de la persistencia de **MySQL local** a **PostgreSQL en la
-nube (Supabase)**, con rediseño del modelo de datos y mejoras de interfaz e
-ingesta desde hardware.
+nube (Supabase)**, con rediseño del modelo de datos. Incluye cambios
+incompatibles respecto a la versión basada en MySQL.
 
----
-
-### Base de datos (Supabase / PostgreSQL)
-- **Nuevo modelo** `nodo → sensor → lectura` en reemplazo de
-  `grupo / tarjeta / tipo / registro`. El nodo es el receptor que agrupa
+### Added
+- **Nuevo modelo** `nodo → sensor → lectura`. El nodo es el receptor que agrupa
   sensores; cada lectura trae temperatura y humedad juntas.
 - `TIMESTAMPTZ` para las fechas e **índice compuesto** `(sensor_id, fecha DESC)`
-  para que las consultas por rango (gráficas) sean rápidas.
+  para consultas por rango (gráficas) rápidas.
 - Columna **`alias`** en `sensor` (nombre amigable, sin afectar el nombre de
   hardware con el que se emparejan las lecturas).
 - **RLS activado** + función **RPC `registrar_lectura`** para la ingesta del
   hardware (autocrea nodo/sensor por MAC y nombre).
-- *Justificación:* acceso remoto desde la nube, modelo acorde a los datos
-  reales y consultas de series de tiempo optimizadas.
+- Nueva **capa de datos** en `concrete/db/`: `engine.py` (conexión desde
+  `DATABASE_URL`), `models.py` (ORM con SQLAlchemy 2.0), `repositories.py`
+  (patrón Repositorio) y `__init__.py`.
+- `load_dotenv()` al inicio de `main.py` (carga la cadena de conexión antes de
+  tocar la base).
+- Serializadores `Nodo`, `Sensor` (nuevo) y `Lectura`.
+- `GUIA_HARDWARE.md` (integración: endpoint, llave publishable, JSON, ejemplo
+  ESP32/Arduino).
+- Archivos auxiliares: `schema_reset.sql`, `migracion_alias.sql`,
+  `rpc_hardware.sql`, `requirements.txt`, `.env.example`, y scripts de prueba
+  `test_conexion.py`, `test_rpc.py`, `sembrar_datos.py`.
 
-### Capa de datos (Python) — nueva, en `concrete/db/`
-- `engine.py`: conexión que lee `DATABASE_URL` del `.env`. Único archivo que
-  conoce el proveedor → cambiar de Supabase a self-hosted es sólo editar el
-  `.env`.
-- `models.py`: modelos ORM (Nodo, Sensor, Lectura) con SQLAlchemy 2.0.
-- `repositories.py`: patrón Repositorio (consultas y escrituras por entidad).
-- `__init__.py`: expone la capa.
+### Changed
 - `conector.py` **reescrito** como *facade* sobre SQLAlchemy/PostgreSQL,
   conservando la API que usa la interfaz para no reescribir los widgets.
+- El **dashboard** muestra una tarjeta por sensor; el nodo aparece como
+  agrupación (etiqueta).
+- **Filtro por nodo** + **búsqueda por texto**.
+- Menú simplificado: "Administrar sensores" (antes "Dispositivo").
+- **Ventana de tamaño fijo**, 2 columnas y **scroll vertical**.
+- `data.py` **reescrito**: historial con dos series (temperatura y humedad) de
+  una sola consulta; manejo de **zona horaria** (se guarda en UTC, se muestra en
+  hora local); **rango de fechas automático**; **filtrado en memoria**; cursor
+  de "cargando"; columna **No. señal**; tabla ajustada al contenido.
+- `registro.py` **reescrito**: de "agregar dispositivo/grupo" a **administrar
+  sensores** (etiquetar alias, nombrar el nodo, eliminar sensores o nodos).
 
-### Interfaz (aplicación de escritorio)
-- `main.py`: se agregó `load_dotenv()` al inicio (carga la cadena de conexión
-  antes de tocar la base).
-- `serializers.py`: se agregaron `Nodo`, `Sensor` (nuevo) y `Lectura`.
-- `main_window.py`:
-  - Dashboard muestra **una tarjeta por sensor**; el nodo aparece como
-    agrupación (etiqueta).
-  - **Filtro por nodo** + **búsqueda por texto**.
-  - Limpieza del menú: "Administrar sensores" (antes "Dispositivo"), se quitó
-    "Grupo".
-  - **Ventana de tamaño fijo**, 2 columnas y **scroll vertical**.
-  - Corrección del **parpadeo** al arrancar (la ventana se muestra ya armada).
-- `data.py` **reescrito**:
-  - Historial con **dos series** (temperatura y humedad) de una sola consulta.
-  - Manejo de **zona horaria**: se guarda en UTC, se muestra en hora local.
-  - **Rango de fechas automático** (primer–último registro del sensor).
-  - **Filtrado en memoria** (mover el rango ya no consulta la nube).
-  - **Cursor de "cargando"** al abrir un sensor.
-  - Columna **No. señal** y **tabla ajustada al contenido** (sin scroll
-    horizontal ni margen vacío).
-- `registro.py` **reescrito**: pasó de "agregar dispositivo/grupo" a
-  **administrar sensores**: etiquetar (alias), nombrar el nodo y **eliminar**
-  sensores o nodos. *(El hardware ya crea nodos/sensores solo.)*
+### Fixed
+- **Parpadeo** de la interfaz al arrancar (la ventana se muestra ya armada).
 
-### Hardware / ingesta
-- `GUIA_HARDWARE.md`: documento de integración (endpoint, llave publishable,
-  formato JSON, ejemplo para ESP32/Arduino).
-
-### Eliminado / obsoleto
+### Removed
 - Modelo de grupos (tablas `grupo`, `tarjeta`, `tipo`, `registro`).
 - Funciones `consultar_grupos`, `agregar_tarjeta`, `agregar_sensor`.
 - Acción de menú "Grupo".
-- En `serializers.py` quedan obsoletas las clases `Grupo` y `Registro`
-  (pueden eliminarse).
-
----
+- Clases `Grupo` y `Registro` en `serializers.py` (quedan obsoletas).
