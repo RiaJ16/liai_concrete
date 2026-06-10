@@ -52,7 +52,7 @@ class BaseBoardWidget(QWidget):
         minutos = (datetime.now(timezone.utc) - ult).total_seconds() / 60
         alerta = minutos > UMBRAL_SIN_REPORTAR_MIN
         if minutos < 1:
-            texto = "hace <1 min"
+            texto = "en línea"
         elif minutos < 60:
             texto = f"hace {int(minutos)} min"
         elif minutos < 60 * 24:
