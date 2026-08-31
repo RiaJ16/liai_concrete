@@ -139,8 +139,12 @@ class DataWidget(QWidget, Ui_data):
         fechas = [l.fecha.astimezone() for l in lecturas]
 
         # Una fila por lectura: No. señal + Fecha.
+        # La tabla se arma del MAS NUEVO al mas viejo (reversed), mientras que la
+        # grafica sigue usando 'lecturas'/'fechas' en orden ascendente (tiempo
+        # de izquierda a derecha). Los valores se ubican por clave, asi que el
+        # orden de las filas no afecta a que celda va cada dato.
         filas_por_clave = {}
-        for reg in lecturas:
+        for reg in reversed(lecturas):
             fecha_local = reg.fecha.astimezone()
             clave = fecha_local.strftime("%Y-%m-%d %H:%M:%S")
             if clave not in filas_por_clave:
@@ -156,7 +160,8 @@ class DataWidget(QWidget, Ui_data):
 
         # Columnas de valores (Temperatura / Humedad)
         series = {}
-        filas_alerta = set()   # filas cuya humedad bajó del umbral
+        filas_alerta = set()   # humedad por debajo del umbral (rojo)
+        filas_ok = set()       # humedad por encima del umbral (verde)
         for sensor in self.sensores:
             col = self.widget_table.columnCount()
             self.widget_table.insertColumn(col)
@@ -172,23 +177,27 @@ class DataWidget(QWidget, Ui_data):
                 item = QTableWidgetItem(texto)
                 item.setTextAlignment(Qt.AlignRight)
                 self.widget_table.setItem(row, col, item)
-                # Humedad por debajo del umbral -> marcar la fila.
-                if sensor.campo == "hum" and valor is not None \
-                        and valor < conector.UMBRAL_HUM_MIN:
-                    filas_alerta.add(row)
+                # Humedad: por debajo del umbral -> rojo; por encima -> verde.
+                if sensor.campo == "hum" and valor is not None:
+                    if valor < conector.UMBRAL_HUM_MIN:
+                        filas_alerta.add(row)
+                    else:
+                        filas_ok.add(row)
             series[sensor.tipo] = valores
 
-        # Resaltar (fondo rojo claro) las filas con humedad baja.
-        if filas_alerta:
-            fondo = QBrush(QColor("#fdecea"))
-            for row in filas_alerta:
+        # Resaltar filas por estado de humedad (rojo/verde claro).
+        fondo_alerta = QBrush(QColor("#fdecea"))   # rojo claro
+        fondo_ok = QBrush(QColor("#eafaf1"))        # verde claro
+        for filas, fondo in ((filas_ok, fondo_ok), (filas_alerta, fondo_alerta)):
+            for row in filas:
                 for col in range(self.widget_table.columnCount()):
                     item = self.widget_table.item(row, col)
                     if item is not None:
                         item.setBackground(fondo)
 
         if fechas:
-            self.widget_chart.plot_data(fechas, series)
+            titulo = self.tarjeta.nombre if self.tarjeta else None
+            self.widget_chart.plot_data(fechas, series, titulo=titulo)
 
         self.widget_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.widget_table.setSelectionMode(QAbstractItemView.SingleSelection)
