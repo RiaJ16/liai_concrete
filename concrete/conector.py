@@ -8,7 +8,8 @@ El dashboard muestra UNA tarjeta por SENSOR; el nodo es la agrupación.
 
 from types import SimpleNamespace
 
-# La humedad no debe bajar de este valor (alerta en rojo en la tarjeta).
+# Umbral mínimo de humedad para el curado. FUENTE ÚNICA: la gráfica
+# (chart_widget.py) lo importa de aquí. Por debajo -> rojo; por encima -> verde.
 UMBRAL_HUM_MIN = 85.0
 
 from concrete.serializers import Tarjeta, Nodo, Sensor, Lectura
@@ -20,9 +21,17 @@ from concrete.db import (
 )
 
 
-def _renglon(tipo, dato, unidades, sensor_id, campo, alerta=False):
+def _renglon(tipo, dato, unidades, sensor_id, campo, estado="neutro"):
+    # estado: 'alerta' (rojo), 'ok' (verde) o 'neutro' (sin color).
     return SimpleNamespace(tipo=tipo, dato=dato, unidades=unidades,
-                           sensor_id=sensor_id, campo=campo, alerta=alerta)
+                           sensor_id=sensor_id, campo=campo, estado=estado)
+
+
+def _estado_humedad(hum):
+    """Clasifica la humedad contra el umbral para colorear la UI."""
+    if hum is None:
+        return "neutro"
+    return "alerta" if hum < UMBRAL_HUM_MIN else "ok"
 
 
 # =====================================================================
@@ -67,7 +76,6 @@ def consultar_tarjetas_con_ultima(nodo_id=None):
             nombre = sensor.alias or sensor.nombre
             temp = ultima.temp if ultima else None
             hum = ultima.hum if ultima else None
-            hum_alerta = hum is not None and hum < UMBRAL_HUM_MIN
             t = Tarjeta(
                 tarjeta_id=sensor.sensor_id,
                 id_fisico=nodo.mac,
@@ -78,7 +86,8 @@ def consultar_tarjetas_con_ultima(nodo_id=None):
             t.ultima_fecha = ultima.fecha if ultima else None
             t.sensores = [
                 _renglon('Temperatura', temp, '°C', sensor.sensor_id, 'temp'),
-                _renglon('Humedad', hum, '%', sensor.sensor_id, 'hum', alerta=hum_alerta),
+                _renglon('Humedad', hum, '%', sensor.sensor_id, 'hum',
+                         estado=_estado_humedad(hum)),
             ]
             tarjetas.append(t)
         return tarjetas
@@ -90,10 +99,10 @@ def consultar_sensores_por_tarjeta(sensor_id):
         ultima = LecturaRepository(s).ultima(sensor_id)
         temp = ultima.temp if ultima else None
         hum = ultima.hum if ultima else None
-        hum_alerta = hum is not None and hum < UMBRAL_HUM_MIN
         return [
             _renglon('Temperatura', temp, '°C', sensor_id, 'temp'),
-            _renglon('Humedad', hum, '%', sensor_id, 'hum', alerta=hum_alerta),
+            _renglon('Humedad', hum, '%', sensor_id, 'hum',
+                     estado=_estado_humedad(hum)),
         ]
 
 

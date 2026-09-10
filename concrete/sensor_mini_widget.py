@@ -35,7 +35,11 @@ class SensorMiniWidget(QWidget):
         labels['dato'].setFont(QFont("Menlo", 12))
         labels['dato'].setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        # Alerta por umbral (p. ej. humedad < 85%): valor en rojo y negrita.
-        if getattr(sensor, 'alerta', False):
+        # Color por estado del umbral: rojo (por debajo) o verde (por encima).
+        estado = getattr(sensor, 'estado', 'neutro')
+        if estado == 'alerta':
             labels['dato'].setStyleSheet("color: #e74c3c; font-weight: bold;")
             labels['unidades'].setStyleSheet("color: #e74c3c;")
+        elif estado == 'ok':
+            labels['dato'].setStyleSheet("color: #2ecc71;")
+            labels['unidades'].setStyleSheet("color: #2ecc71;")
